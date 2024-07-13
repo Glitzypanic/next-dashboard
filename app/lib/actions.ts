@@ -4,6 +4,8 @@ import { z } from "zod";
 import { sql } from "@vercel/postgres";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { signIn } from "@/auth";
+import { AuthError } from "next-auth";
 
 // Define the shape of the state object
 export type State = {
@@ -36,6 +38,26 @@ const FormsSchema = z.object({
 
 const UpdateInvoice = FormsSchema.omit({ id: true, date: true });
 const CreateInvoice = FormsSchema.omit({ id: true, date: true });
+
+// Authenticate the user
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData
+) {
+  try {
+    await signIn("credentials", formData);
+  } catch (error) {
+    if (error instanceof AuthError) {
+      switch (error.type) {
+        case "CredentialsSignin":
+          return "Invalid credentials.";
+        default:
+          return "Something went wrong.";
+      }
+    }
+    throw error;
+  }
+}
 
 // Create an invoice in the database
 export async function createInvoice(prevState: State, formData: FormData) {
